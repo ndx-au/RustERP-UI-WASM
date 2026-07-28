@@ -40,15 +40,15 @@ impl Domain {
         }
     }
 
-    /// ASCII-only rail icon glyph — font-safe for egui built-in fonts.
+    /// Unicode rail icon glyphs with embedded fallback font support.
     /// Tooltips show the full domain label.
     pub fn icon(self) -> &'static str {
         match self {
-            Self::Home => "H",
-            Self::Parties => "P",
-            Self::Catalog => "C",
-            Self::Sales => "S",
-            Self::Settings => "S2",
+            Self::Home => "⌂",
+            Self::Parties => "♟",
+            Self::Catalog => "☰",
+            Self::Sales => "¤",
+            Self::Settings => "⚙",
         }
     }
 

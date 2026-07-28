@@ -18,6 +18,8 @@ listed in project manifests), those components remain under their
 respective licenses; see each package’s crate page, license file, or
 source tree for details.
 
-If you redistribute RustERP-UI-WASM binaries or source that incorporate
-third-party code, retain any required copyright notices and license
-texts for those components as required by their licenses.
+Fonts used in this project (DejaVu Sans, assets/fonts/DejaVuSans.ttf)
+are licensed under the BSD-style DejaVu Fonts license (derived from
+Bitstream Vera). If you redistribute RustERP-UI-WASM binaries or source
+that incorporate third-party code, retain any required copyright notices
+and license texts for those components as required by their licenses.

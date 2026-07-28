@@ -26,7 +26,20 @@ pub struct ReferenceApp {
 
 impl ReferenceApp {
     /// Construct the shell. `endpoint_override` comes from CLI when present.
-    pub fn new(_cc: &eframe::CreationContext<'_>, endpoint_override: Option<String>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, endpoint_override: Option<String>) -> Self {
+        // Embed DejaVu Sans as proportional fallback for Unicode rail icons.
+        let mut fonts = egui::FontDefinitions::default();
+        fonts.font_data.insert(
+            "DejaVuSans".into(),
+            egui::FontData::from_static(include_bytes!("../../../assets/fonts/DejaVuSans.ttf")).into(),
+        );
+        fonts
+            .families
+            .get_mut(&egui::FontFamily::Proportional)
+            .unwrap()
+            .push("DejaVuSans".into());
+        cc.egui_ctx.set_fonts(fonts);
+
         let rpc_url = endpoint_override
             .map(|v| normalize_rpc_url(&v))
             .unwrap_or_else(default_rpc_url);

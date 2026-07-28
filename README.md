@@ -132,6 +132,8 @@ RUSTERP_RPC_URL=ws://127.0.0.1:8123/rpc cargo run -p rusterp-ui --features nativ
 **Expected (shell smoke)**
 
 1. Window shows **icon rail** + **domain menu** + **top bar** + content.
+   Unicode rail icons (`⌂ ♟ ☰ ¤ ⚙`) render correctly thanks to embedded DejaVu Sans fallback.
+2. **Parties → All Parties**: status moves to **connecting**, then **connected**
 2. **Parties → All Parties**: status moves to **connecting**, then **connected**
    (or honest **empty** list). Top bar shows connection status.
 3. **Settings sprocket** (rail bottom) → Settings menu → tabs **Connection | About**.

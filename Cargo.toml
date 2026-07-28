@@ -1,0 +1,33 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/rusterp-ui",
+    "crates/rusterp-api-client",
+]
+default-members = ["crates/rusterp-ui"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/ndx-video/RustERP-UI-WASM"
+homepage = "https://RustERP.biz"
+authors = ["NDX Pty Ltd and contributors"]
+
+[workspace.dependencies]
+rusterp-api-client = { path = "crates/rusterp-api-client" }
+eframe = { version = "0.35.0", default-features = false }
+egui = "0.35.0"
+log = "0.4"
+slozhn = { version = "1.1", default-features = false }
+tonic = { version = "0.14", default-features = false }
+prost = "0.14"
+tokio = { version = "1", default-features = false }
+tonic-prost-build = "0.14"
+
+[profile.release]
+opt-level = 2
+
+# Keep WASM debug builds usable.
+[profile.dev.package."*"]
+opt-level = 2

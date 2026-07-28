@@ -1,0 +1,44 @@
+[package]
+name = "rusterp-ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Reference egui/eframe WASM UI shell for RustERP (consumer only)."
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "rusterp-ui"
+path = "src/main.rs"
+required-features = ["native"]
+
+[features]
+default = []
+native = [
+    "dep:env_logger",
+    "dep:tokio",
+    "eframe/default",
+]
+
+[dependencies]
+rusterp-api-client = { workspace = true }
+# x11/wayland so host `cargo check` (lib) works without `--features native`.
+eframe = { workspace = true, default-features = false, features = ["glow", "default_fonts", "x11", "wayland"] }
+egui = { workspace = true }
+log = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = { version = "0.11", optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "time", "macros"], optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+console_error_panic_hook = "0.1"
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlCanvasElement"] }

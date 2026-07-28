@@ -1,0 +1,5 @@
+[build]
+target = "index.html"
+dist = "dist"
+# Stable asset names aid simple smoke checks; prefer content hashes in later phases if needed.
+filehash = false

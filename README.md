@@ -197,3 +197,26 @@ Third-party Rust dependencies (for example egui/eframe, tonic/prost, slozhn;
 typically MIT OR Apache-2.0) are pulled from crates.io; see each crate’s license
 metadata and `Cargo.lock` for exact versions. Vendored `.proto` contracts retain
 their upstream Apache-2.0 headers from RustERP.
+
+## Static asset compression
+
+WASM binaries are large (~5.5 MB for the current shell). The deploy script
+(`RustERP/dist/deploy-ui-stack.sh`) generates **zstd-precompressed** `.zst`
+siblings for every static asset (`.wasm`, `.js`, `.html`) at deploy time.
+
+Caddy serves these via `file_server { precompressed zstd }` — zero runtime
+compression cost. Browsers that send `Accept-Encoding: zstd` receive the
+precompressed file directly (~2.0 MB, a 63% reduction).
+
+**Why zstd over brotli or gzip:**
+
+| Codec | Size | Compress time | Notes |
+|-------|------|---------------|-------|
+| raw | 5.51 MB | — | no compression |
+| zstd -19 | 2.03 MB (63.2% saved) | 4s | best balanced; no extra deps |
+| brotli -q 11 | 1.91 MB (65.3% saved) | 19s | marginal gain, slow, needs brotli CLI |
+| gzip -9 | 2.42 MB (56.1% saved) | 1s | worst ratio |
+
+zstd wins on the size/effort tradeoff. Brotli q11 only saves ~117 KB more for
+5x the compress time and an extra binary dependency. The Caddy image already
+has `http.precompressed.zstd` built in — no plugin rebuild needed.

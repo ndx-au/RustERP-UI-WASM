@@ -40,4 +40,5 @@ crates/**/dist/
 .nucleus/attestations/
 # Runtime pid/log (parity with RustERP core)
 .local/
-.nucleus/history.jsonl
+.nucleus/
+.out/

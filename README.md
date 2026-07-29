@@ -3,7 +3,7 @@
 **Official site:** [https://RustERP.biz](https://RustERP.biz)
 
 RustERP-UI-WASM by NDX Pty Ltd is a **reference UI consumer** of
-[RustERP](https://github.com/ndx-video/RustERP) — a modular, snug-fit,
+[RustERP](https://github.com/ndx-au/RustERP) — a modular, snug-fit,
 open-source ERP written in Rust. This repository focuses on browser/WASM
 client surfaces that talk to RustERP as a **headless API** (gRPC-over-WebSocket
 via **slozhn** + protobufs). It does **not** contain ERP domain logic or storage.
@@ -17,8 +17,8 @@ live on the official site.
 | | |
 |--|--|
 | **Website** | [RustERP.biz](https://RustERP.biz) |
-| **Source (this UI)** | [github.com/ndx-video/RustERP-UI-WASM](https://github.com/ndx-video/RustERP-UI-WASM) |
-| **Source (ERP core)** | [github.com/ndx-video/RustERP](https://github.com/ndx-video/RustERP) |
+| **Source (this UI)** | [github.com/ndx-au/RustERP-UI-WASM](https://github.com/ndx-au/RustERP-UI-WASM) |
+| **Source (ERP core)** | [github.com/ndx-au/RustERP](https://github.com/ndx-au/RustERP) |
 | **Contributing** | [CONTRIBUTING.md](./CONTRIBUTING.md) |
 
 ## Status
@@ -117,7 +117,7 @@ Cargo workspace (virtual root):
 
 - Rust toolchain (edition 2021; current stable is fine)
 - [`protoc`](https://grpc.io/docs/protoc-installation/) on `PATH` (client codegen)
-- A checkout of [RustERP](https://github.com/ndx-video/RustERP) to run the core server (separate repo)
+- A checkout of [RustERP](https://github.com/ndx-au/RustERP) to run the core server (separate repo)
 - `wasm32-unknown-unknown` target (WASM builds):
   ```bash
   rustup target add wasm32-unknown-unknown

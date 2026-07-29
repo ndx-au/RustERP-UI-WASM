@@ -1,7 +1,7 @@
 # Vendored RustERP protobuf contracts
 
 These `.proto` files are **copies** of the public contracts from
-[RustERP](https://github.com/ndx-video/RustERP) (`proto/`), vendored so this
+[RustERP](https://github.com/ndx-au/RustERP) (`proto/`), vendored so this
 consumer repo can generate a **client-only** tonic stub without a path
 dependency on a local core checkout.
 

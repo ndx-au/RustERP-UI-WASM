@@ -535,7 +535,7 @@ impl ReferenceApp {
         ui.add_space(8.0);
         ui.hyperlink_to(
             "RustERP core (GitHub)",
-            "https://github.com/ndx-video/RustERP",
+            "https://github.com/ndx-au/RustERP",
         );
         ui.hyperlink_to("RustERP.biz", "https://RustERP.biz");
     }

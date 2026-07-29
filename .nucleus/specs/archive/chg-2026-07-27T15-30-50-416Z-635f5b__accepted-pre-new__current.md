@@ -2,7 +2,7 @@
 
 ## Goal
 
-Bring the reference UI in line with [Macaron](https://github.com/ndx-video/macaron)
+Bring the reference UI in line with [Macaron](https://github.com/ndx-au/macaron)
 client patterns: **slozhn** gRPC-over-WebSocket, `spawn_local_fut`, `shared_result`
 (Ledger-style unary), feature-gated Tokio, and **live WASM RPC** against the core
 HTTP listener (`ws://host/rpc`).

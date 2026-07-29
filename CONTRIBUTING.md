@@ -1,7 +1,7 @@
 # Contributing to RustERP-UI-WASM by NDX Pty Ltd
 
 Thanks for your interest in **RustERP-UI-WASM by NDX Pty Ltd**. This repository
-is a **reference UI implementation** for [RustERP](https://github.com/ndx-video/RustERP)
+is a **reference UI implementation** for [RustERP](https://github.com/ndx-au/RustERP)
 — browser/WASM-oriented surfaces that consume the ERP as a headless API client.
 
 **Official site:** [https://RustERP.biz](https://RustERP.biz) — product

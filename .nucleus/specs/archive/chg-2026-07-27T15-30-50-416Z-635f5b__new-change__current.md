@@ -11,7 +11,7 @@ Establish a verifiable **reference WASM UI skeleton** for RustERP-UI-WASM: an eg
 - **License:** Apache-2.0 remains; do not relicense or add conflicting top-level licenses. New deps must be redistribution-compatible with Apache-2.0.
 - **Separation:** UI presentation crate(s) distinct from a future/generated client-stub crate (or clearly reserved path/module boundary even if the stub crate is empty/placeholder).
 - **Nucleus hygiene:** `.gitignore` tracks `.nucleus/` except secrets (at least `attest.key`), aligned with core policy; do not commit attestation keys.
-- **Honesty:** README must state this is a **reference consumer** of [RustERP](https://github.com/ndx-video/RustERP), link the core repo, and document the intended stack without claiming live API integration.
+- **Honesty:** README must state this is a **reference consumer** of [RustERP](https://github.com/ndx-au/RustERP), link the core repo, and document the intended stack without claiming live API integration.
 - **Scope discipline:** foundations only — no Parties/invoices/ERP screens, no auth productization, no multi-tenant shell product claims.
 - **Attestation-first:** acceptance checks must be runnable via `nucleus_attest` (no “works on my machine” claims).
 
@@ -23,7 +23,7 @@ Establish a verifiable **reference WASM UI skeleton** for RustERP-UI-WASM: an eg
 - [ ] **Minimal app shell** runs as an empty/hello shell (window or WASM canvas host) with placeholder content only (e.g. title + short “RustERP reference UI — not connected” text). No fabricated ERP entities.
 - [ ] **`cargo check`** (workspace or default members) succeeds and is attested via `nucleus_attest`.
 - [ ] **WASM toolchain path is declared** in README (rustup target `wasm32-unknown-unknown`, and chosen bundler — default nomination: **trunk** unless Decision Log changes it). If trunk (or equivalent) is wired, **`trunk build`** (or the nominated equivalent) succeeds and is attested; if bundler wiring is deferred, README must say so explicitly and AC is limited to `cargo check --target wasm32-unknown-unknown` attested instead — **one** of these two WASM paths must be attested, not neither.
-- [ ] **README** includes: purpose as reference consumer of RustERP; link to `https://github.com/ndx-video/RustERP`; intended stack (Rust, egui/eframe, WASM, future gRPC-over-WebSocket); how to build/check locally; explicit **Status** that live ERP talk is out of scope for this phase.
+- [ ] **README** includes: purpose as reference consumer of RustERP; link to `https://github.com/ndx-au/RustERP`; intended stack (Rust, egui/eframe, WASM, future gRPC-over-WebSocket); how to build/check locally; explicit **Status** that live ERP talk is out of scope for this phase.
 - [ ] **`.gitignore`** covers Rust (`target/`, etc.), WASM/bundler artifacts (e.g. `dist/`, trunk output), and Nucleus secrets (ignore `.nucleus/attest.key` and similar keys) while allowing `.nucleus/specs/`, attestations metadata policy consistent with tracking `.nucleus/` tree as appropriate.
 - [ ] **No domain screens** introduced (no Parties, invoices, inventory, etc.).
 - [ ] **License/NOTICE** remain coherent; new third-party notice obligations (if any from deps) reflected per CONTRIBUTING guidance or flagged in Decision Log if deferred with justification.

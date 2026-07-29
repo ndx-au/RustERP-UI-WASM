@@ -10,7 +10,7 @@ default-members = ["crates/rusterp-ui"]
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/ndx-video/RustERP-UI-WASM"
+repository = "https://github.com/ndx-au/RustERP-UI-WASM"
 homepage = "https://RustERP.biz"
 authors = ["NDX Pty Ltd and contributors"]
 

@@ -2,6 +2,7 @@
 
 mod app;
 mod shell;
+mod wireframe;
 
 pub use app::ReferenceApp;
 pub use shell::{Domain, Page, SettingsTab, ShellNav};

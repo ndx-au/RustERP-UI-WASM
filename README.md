@@ -23,21 +23,49 @@ live on the official site.
 
 ## Status
 
-**Phase 2 — App shell chrome (egui).**
+**Phase 2 — App shell chrome (egui) + schema wireframe IA.**
 
-Permanent **egui/eframe** application chrome around the Phase 1 Parties list:
+Permanent **egui/eframe** application chrome mapping the RustERP PostgreSQL schema
+([`docs/schema.md`](../RustERP/docs/schema.md) in the core repo). Every domain and page
+is navigable; content areas show **wireframe stubs** (schema path + placeholder) except
+**Parties list pages** (live gRPC) and **Settings → Connection** (live).
 
 | Chrome | Role |
 |--------|------|
-| **Icon rail** (~56px) | Domains: Parties + Settings (active); Home / Catalog / Sales placeholders (“not enabled”) |
+| **Icon rail** (~56px) | MVP domains (Home → Inventory), divider, post-MVP stubs, Settings pinned bottom |
 | **Domain menu** (~200px) | Pages for the selected domain |
 | **Top bar** (~48px) | Logo slot + connection status (honest empty/error; no fabricated rows) |
-| **Content host** | Page body; optional page tabs |
+| **Content host** | Live Parties grid, Settings panes, or wireframe stub |
+
+### Icon rail (top → bottom)
+
+| Domain | Icon | Tier | Schema |
+|--------|------|------|--------|
+| Home | `⌂` | Wireframe | `core` |
+| Parties | `♟` | **Live list** | `party` |
+| Catalog | `☰` | Wireframe | `catalog` |
+| Sales | `¤` | Wireframe | `sales` |
+| Payments | `⊕` | Wireframe | `payment` |
+| Inventory | `⌗` | Wireframe | `inventory` |
+| — divider — | | | |
+| Purchasing | `⇩` | Post-MVP stub | `purchase` |
+| Accounting | `Σ` | Post-MVP stub | `accounting` |
+| CRM | `☎` | Post-MVP stub | `crm` |
+| Projects | `▣` | Post-MVP stub | `project` |
+| HR | `⚲` | Post-MVP stub | `hr` |
+| Manufacturing | `⚒` | Post-MVP stub | `manufacturing` |
+| Settings | `⚙` | Live + wireframe tabs | platform / `auth` |
 
 | Domain | Pages / panes |
 |--------|----------------|
-| **Parties** | **All Parties** (live list). Optional Customers / Suppliers → same list (“not filtered yet”) |
-| **Settings** (sprocket, rail bottom) | Tabs **Connection \| About** (multi-pane pattern). Single-pane pages do **not** show a lonely tab strip |
+| **Home** | Dashboard (wireframe) |
+| **Parties** | All Parties / Customers / Suppliers (**live**); Prospects / Contacts / Addresses (wireframe) |
+| **Catalog** | Products, Categories, Units of Measure, Price Lists |
+| **Sales** | Quotes, Orders, Invoices, Credit Notes |
+| **Payments** | Payments, Bank Accounts, Allocations |
+| **Inventory** | Warehouses, Stock Levels, Stock Moves |
+| **Purchasing … Manufacturing** | Post-MVP stub pages (one page each) |
+| **Settings** (sprocket, rail bottom) | Tabs **Connection \| Modules \| Users & Roles \| About** |
 
 Design/IA reference (not runtime): local [`stitch/`](./stitch/) (`screen.png`, `DESIGN.md`, `code.html`). Approximate tokens only — no HTML/CSS/Tailwind shell, no Stitch codegen, no Material Symbols.
 

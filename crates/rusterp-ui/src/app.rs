@@ -1,8 +1,9 @@
 //! Reference shell chrome: rail + domain menu + top bar + content host.
 
 use crate::shell::{
-    pages_for_domain, tokens, Domain, Page, SettingsTab, ShellNav,
+    pages_for_domain, tokens, Domain, DomainTier, Page, SettingsTab, ShellNav,
 };
+use crate::wireframe::draw_wireframe_stub;
 use rusterp_api_client::{
     default_rpc_url, live_grpc_supported, live_grpc_unavailable_reason, normalize_rpc_url,
     shared_result, spawn_local_fut, Connection, ConnectionStatus, PartyRow, RefreshSnapshot,
@@ -127,62 +128,87 @@ impl ReferenceApp {
         ctx.set_theme(egui::Theme::Dark);
     }
 
+    fn draw_rail_domain_button(&mut self, ui: &mut egui::Ui, domain: Domain, selected: Domain) {
+        let is_sel = domain == selected;
+        let mut text = egui::RichText::new(domain.icon()).size(20.0);
+        if is_sel {
+            text = text.color(tokens::ACCENT);
+        } else if domain.tier() == DomainTier::FutureStub {
+            text = text.color(tokens::WIREFRAME_MUTED);
+        }
+        let response = ui
+            .add(egui::Button::new(text).frame(false))
+            .on_hover_text(domain.rail_tooltip());
+        if is_sel {
+            let rect = response.rect;
+            let indicator = egui::Rect::from_min_size(
+                egui::pos2(rect.left() - 4.0, rect.top()),
+                egui::vec2(3.0, rect.height()),
+            );
+            ui.painter()
+                .rect_filled(indicator, egui::CornerRadius::ZERO, tokens::ACCENT);
+        }
+        if response.clicked() {
+            let _ = self.nav.select_domain(domain);
+        }
+    }
+
     fn draw_rail(&mut self, ui: &mut egui::Ui) {
         let selected = self.nav.selected_domain;
-        ui.vertical_centered(|ui| {
+        ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
             ui.add_space(8.0);
-            for domain in Domain::main_rail() {
-                let domain = *domain;
-                let enabled = domain.is_enabled();
-                let is_sel = domain == selected;
-                let mut text = egui::RichText::new(domain.icon()).size(20.0);
-                if is_sel {
-                    text = text.color(tokens::ACCENT);
-                }
-                let btn = egui::Button::new(text).frame(false);
-                let response = ui.add_enabled(enabled, btn).on_hover_text(if enabled {
-                    domain.label().to_string()
-                } else {
-                    format!("{} — not enabled", domain.label())
-                });
-                if is_sel {
-                    let rect = response.rect;
-                    let indicator = egui::Rect::from_min_size(
-                        egui::pos2(rect.left() - 4.0, rect.top()),
-                        egui::vec2(3.0, rect.height()),
-                    );
-                    ui.painter()
-                        .rect_filled(indicator, egui::CornerRadius::ZERO, tokens::ACCENT);
-                }
-                if response.clicked() {
-                    let _ = self.nav.select_domain(domain);
-                }
-                ui.add_space(4.0);
+            let is_sel = selected == Domain::Settings;
+            let mut text = egui::RichText::new(Domain::Settings.icon()).size(20.0);
+            if is_sel {
+                text = text.color(tokens::ACCENT);
+            }
+            let response = ui
+                .add(egui::Button::new(text).frame(false))
+                .on_hover_text(Domain::Settings.rail_tooltip());
+            if is_sel {
+                let rect = response.rect;
+                let indicator = egui::Rect::from_min_size(
+                    egui::pos2(rect.left() - 4.0, rect.top()),
+                    egui::vec2(3.0, rect.height()),
+                );
+                ui.painter()
+                    .rect_filled(indicator, egui::CornerRadius::ZERO, tokens::ACCENT);
+            }
+            if response.clicked() {
+                self.nav.open_settings();
             }
 
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-                ui.add_space(8.0);
-                let is_sel = selected == Domain::Settings;
-                let mut text = egui::RichText::new(Domain::Settings.icon()).size(20.0);
-                if is_sel {
-                    text = text.color(tokens::ACCENT);
-                }
-                let response = ui
-                    .add(egui::Button::new(text).frame(false))
-                    .on_hover_text("Settings");
-                if is_sel {
-                    let rect = response.rect;
-                    let indicator = egui::Rect::from_min_size(
-                        egui::pos2(rect.left() - 4.0, rect.top()),
-                        egui::vec2(3.0, rect.height()),
-                    );
-                    ui.painter()
-                        .rect_filled(indicator, egui::CornerRadius::ZERO, tokens::ACCENT);
-                }
-                if response.clicked() {
-                    self.nav.open_settings();
-                }
-            });
+            ui.add_space(8.0);
+            egui::ScrollArea::vertical()
+                .auto_shrink([false; 2])
+                .show(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(8.0);
+                        for domain in Domain::mvp_rail() {
+                            self.draw_rail_domain_button(ui, *domain, selected);
+                            ui.add_space(4.0);
+                        }
+
+                        ui.add_space(4.0);
+                        let sep_width = tokens::RAIL_WIDTH - 16.0;
+                        let (sep_rect, _) = ui.allocate_exact_size(
+                            egui::vec2(sep_width, 1.0),
+                            egui::Sense::hover(),
+                        );
+                        ui.painter().hline(
+                            sep_rect.x_range(),
+                            sep_rect.center().y,
+                            egui::Stroke::new(1.0, tokens::WIREFRAME_MUTED),
+                        );
+                        ui.add_space(4.0);
+
+                        for domain in Domain::future_rail() {
+                            self.draw_rail_domain_button(ui, *domain, selected);
+                            ui.add_space(4.0);
+                        }
+                        ui.add_space(8.0);
+                    });
+                });
         });
     }
 
@@ -196,11 +222,6 @@ impl ReferenceApp {
         ui.add_space(4.0);
 
         let pages = pages_for_domain(self.nav.selected_domain);
-        if pages.is_empty() {
-            ui.label("Not enabled this phase.");
-            return;
-        }
-
         for page in pages {
             let page = *page;
             let selected = self.nav.selected_page == page;
@@ -358,8 +379,100 @@ impl ReferenceApp {
 
         match self.nav.selected_tab {
             SettingsTab::Connection => self.draw_settings_connection(ui),
+            SettingsTab::Modules => self.draw_settings_modules(ui),
+            SettingsTab::UsersAndRoles => self.draw_settings_users_roles(ui),
             SettingsTab::About => self.draw_settings_about(ui),
         }
+    }
+
+    fn draw_settings_modules(&mut self, ui: &mut egui::Ui) {
+        ui.label(egui::RichText::new("Modules").strong());
+        ui.add_space(4.0);
+        ui.label(
+            egui::RichText::new(
+                "Static mirror of core.modules seed — synced from platform API when it lands.",
+            )
+            .small()
+            .weak(),
+        );
+        ui.add_space(8.0);
+
+        struct ModuleRow {
+            id: &'static str,
+            name: &'static str,
+            enabled: bool,
+            always_on: bool,
+        }
+
+        let rows = [
+            ModuleRow {
+                id: "core",
+                name: "Core Platform",
+                enabled: true,
+                always_on: true,
+            },
+            ModuleRow {
+                id: "parties",
+                name: "Parties",
+                enabled: true,
+                always_on: false,
+            },
+            ModuleRow {
+                id: "catalog",
+                name: "Catalog",
+                enabled: true,
+                always_on: false,
+            },
+            ModuleRow {
+                id: "sales",
+                name: "Sales",
+                enabled: true,
+                always_on: false,
+            },
+            ModuleRow {
+                id: "payments",
+                name: "Payments",
+                enabled: true,
+                always_on: false,
+            },
+            ModuleRow {
+                id: "inventory",
+                name: "Inventory",
+                enabled: false,
+                always_on: false,
+            },
+        ];
+
+        egui::Grid::new("modules_grid")
+            .striped(true)
+            .num_columns(4)
+            .min_col_width(80.0)
+            .show(ui, |ui| {
+                ui.strong("id");
+                ui.strong("name");
+                ui.strong("enabled");
+                ui.strong("always_on");
+                ui.end_row();
+                for row in rows {
+                    ui.monospace(row.id);
+                    ui.label(row.name);
+                    ui.label(if row.enabled { "yes" } else { "no" });
+                    ui.label(if row.always_on { "yes" } else { "no" });
+                    ui.end_row();
+                }
+            });
+    }
+
+    fn draw_settings_users_roles(&mut self, ui: &mut egui::Ui) {
+        draw_wireframe_stub(
+            ui,
+            "Users & Roles",
+            &crate::shell::WireframeMeta {
+                schema_path: "auth.users, auth.roles, auth.permissions",
+                tier_label: "MVP schema",
+                description: "Classic RBAC — users, groups, roles, resource:action permissions.",
+            },
+        );
     }
 
     fn draw_settings_connection(&mut self, ui: &mut egui::Ui) {
@@ -431,11 +544,15 @@ impl ReferenceApp {
         ui.set_width(ui.available_width());
         match self.nav.selected_page {
             Page::AllParties | Page::Customers | Page::Suppliers => {
-                // Single-pane: no tab strip.
                 self.draw_parties_content(ui);
             }
             Page::SettingsHost => {
                 self.draw_settings_content(ui);
+            }
+            page => {
+                if let Some(meta) = page.wireframe_meta() {
+                    draw_wireframe_stub(ui, page.label(), &meta);
+                }
             }
         }
     }

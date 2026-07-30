@@ -10,17 +10,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .canonicalize()
         .map_err(|e| format!("proto/ root missing ({e}); expected vendored contracts"))?;
 
-    let party = proto_root.join("rusterp/party/v1/party.proto");
-    let health = proto_root.join("rusterp/platform/v1/health.proto");
+    let protos = [
+        proto_root.join("rusterp/party/v1/party.proto"),
+        proto_root.join("rusterp/platform/v1/health.proto"),
+        proto_root.join("rusterp/platform/v1/modules_auth.proto"),
+        proto_root.join("rusterp/catalog/v1/catalog.proto"),
+        proto_root.join("rusterp/sales/v1/sales.proto"),
+        proto_root.join("rusterp/payment/v1/payment.proto"),
+        proto_root.join("rusterp/inventory/v1/inventory.proto"),
+    ];
 
-    println!("cargo:rerun-if-changed={}", party.display());
-    println!("cargo:rerun-if-changed={}", health.display());
+    for p in &protos {
+        println!("cargo:rerun-if-changed={}", p.display());
+    }
 
     tonic_prost_build::configure()
         .build_server(false)
         .build_client(true)
         .build_transport(false)
-        .compile_protos(&[party, health], &[proto_root])?;
+        .compile_protos(&protos, &[proto_root])?;
 
     Ok(())
 }

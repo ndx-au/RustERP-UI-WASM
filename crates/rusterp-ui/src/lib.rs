@@ -1,6 +1,7 @@
 //! Reference UI shell for RustERP — presentation only; no domain logic.
 
 mod app;
+mod domains;
 mod shell;
 mod wireframe;
 

@@ -5,24 +5,98 @@ use crate::shell::{
 };
 use crate::wireframe::draw_wireframe_stub;
 use rusterp_api_client::{
-    default_rpc_url, live_grpc_supported, live_grpc_unavailable_reason, normalize_rpc_url,
-    shared_result, spawn_local_fut, Connection, ConnectionStatus, PartyRow, RefreshSnapshot,
-    SharedResult, DEFAULT_RPC_URL, ENDPOINT_ENV, RPC_URL_ENV,
+    add_address, add_contact, create_party, default_rpc_url, list_addresses, list_contacts,
+    live_grpc_supported, live_grpc_unavailable_reason, normalize_rpc_url, shared_result,
+    spawn_local_fut, AddressRow, AllocationRow, BankAccountRow, CategoryRow, Connection,
+    ConnectionStatus, ContactRow, ModuleRow, PartyRole, PartyRow, PaymentRow, PermissionRow,
+    ProductRow, RefreshSnapshot, RoleRow, SalesDocRow, SharedResult, StockLevelRow, StockMoveRow,
+    UserRow, WarehouseRow, DEFAULT_RPC_URL, ENDPOINT_ENV, RPC_URL_ENV,
 };
 
 /// App version string for Settings → About (workspace package version).
-const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub(crate) const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Minimal shell: chrome + Phase 1 Parties list + Settings panes. No edit/create flows.
+/// Shell: chrome + live MVP domains + Settings panes.
 pub struct ReferenceApp {
-    nav: ShellNav,
-    conn: Connection,
-    rpc_url: String,
-    status: ConnectionStatus,
-    parties: Vec<PartyRow>,
-    health: Option<String>,
-    refresh_slot: Option<SharedResult<RefreshSnapshot>>,
-    auto_started: bool,
+    pub(crate) nav: ShellNav,
+    pub(crate) conn: Connection,
+    pub(crate) rpc_url: String,
+    pub(crate) status: ConnectionStatus,
+    pub(crate) parties: Vec<PartyRow>,
+    pub(crate) health: Option<String>,
+    pub(crate) refresh_slot: Option<SharedResult<RefreshSnapshot>>,
+    pub(crate) auto_started: bool,
+    // Create-party form
+    pub(crate) new_party_name: String,
+    pub(crate) new_party_customer: bool,
+    pub(crate) new_party_supplier: bool,
+    pub(crate) new_party_prospect: bool,
+    pub(crate) form_error: Option<String>,
+    pub(crate) mutate_slot: Option<SharedResult<Result<(), String>>>,
+    // Contacts / addresses
+    pub(crate) selected_party_id: Option<String>,
+    pub(crate) contacts: Vec<ContactRow>,
+    pub(crate) addresses: Vec<AddressRow>,
+    pub(crate) new_contact_name: String,
+    pub(crate) new_contact_email: String,
+    pub(crate) new_contact_phone: String,
+    pub(crate) new_address_line1: String,
+    pub(crate) new_address_city: String,
+    pub(crate) new_address_country: String,
+    pub(crate) contacts_slot: Option<SharedResult<Result<Vec<ContactRow>, String>>>,
+    pub(crate) addresses_slot: Option<SharedResult<Result<Vec<AddressRow>, String>>>,
+    // Catalog
+    pub(crate) products: Vec<ProductRow>,
+    pub(crate) categories: Vec<CategoryRow>,
+    pub(crate) new_product_sku: String,
+    pub(crate) new_product_name: String,
+    pub(crate) new_category_name: String,
+    pub(crate) products_slot: Option<SharedResult<Result<Vec<ProductRow>, String>>>,
+    pub(crate) categories_slot: Option<SharedResult<Result<Vec<CategoryRow>, String>>>,
+    // Sales
+    pub(crate) sales_docs: Vec<SalesDocRow>,
+    pub(crate) new_sales_party_id: String,
+    pub(crate) new_sales_desc: String,
+    pub(crate) new_sales_price: String,
+    pub(crate) sales_slot: Option<SharedResult<Result<Vec<SalesDocRow>, String>>>,
+    // Payments
+    pub(crate) payments: Vec<PaymentRow>,
+    pub(crate) bank_accounts: Vec<BankAccountRow>,
+    pub(crate) allocations: Vec<AllocationRow>,
+    pub(crate) new_bank_name: String,
+    pub(crate) new_bank_currency: String,
+    pub(crate) new_pay_party_id: String,
+    pub(crate) new_pay_amount: String,
+    pub(crate) new_pay_ref: String,
+    pub(crate) alloc_payment_id: String,
+    pub(crate) alloc_document_id: String,
+    pub(crate) alloc_amount: String,
+    pub(crate) payments_slot: Option<SharedResult<Result<Vec<PaymentRow>, String>>>,
+    pub(crate) banks_slot: Option<SharedResult<Result<Vec<BankAccountRow>, String>>>,
+    pub(crate) allocs_slot: Option<SharedResult<Result<Vec<AllocationRow>, String>>>,
+    // Inventory
+    pub(crate) warehouses: Vec<WarehouseRow>,
+    pub(crate) stock_levels: Vec<StockLevelRow>,
+    pub(crate) stock_moves: Vec<StockMoveRow>,
+    pub(crate) new_wh_code: String,
+    pub(crate) new_wh_name: String,
+    pub(crate) new_move_product_id: String,
+    pub(crate) new_move_qty: String,
+    pub(crate) new_move_wh_id: String,
+    pub(crate) warehouses_slot: Option<SharedResult<Result<Vec<WarehouseRow>, String>>>,
+    pub(crate) levels_slot: Option<SharedResult<Result<Vec<StockLevelRow>, String>>>,
+    pub(crate) moves_slot: Option<SharedResult<Result<Vec<StockMoveRow>, String>>>,
+    pub(crate) inventory_error: Option<String>,
+    // Modules / auth
+    pub(crate) modules: Vec<ModuleRow>,
+    pub(crate) users: Vec<UserRow>,
+    pub(crate) roles: Vec<RoleRow>,
+    pub(crate) permissions: Vec<PermissionRow>,
+    pub(crate) new_user_login: String,
+    pub(crate) new_user_display: String,
+    pub(crate) new_user_password: String,
+    pub(crate) modules_slot: Option<SharedResult<Result<Vec<ModuleRow>, String>>>,
+    pub(crate) users_slot: Option<SharedResult<Result<(Vec<UserRow>, Vec<RoleRow>, Vec<PermissionRow>), String>>>,
 }
 
 impl ReferenceApp {
@@ -54,6 +128,79 @@ impl ReferenceApp {
             health: None,
             refresh_slot: None,
             auto_started: false,
+            new_party_name: String::new(),
+            new_party_customer: true,
+            new_party_supplier: false,
+            new_party_prospect: false,
+            form_error: None,
+            mutate_slot: None,
+            selected_party_id: None,
+            contacts: Vec::new(),
+            addresses: Vec::new(),
+            new_contact_name: String::new(),
+            new_contact_email: String::new(),
+            new_contact_phone: String::new(),
+            new_address_line1: String::new(),
+            new_address_city: String::new(),
+            new_address_country: "AU".into(),
+            contacts_slot: None,
+            addresses_slot: None,
+            products: Vec::new(),
+            categories: Vec::new(),
+            new_product_sku: String::new(),
+            new_product_name: String::new(),
+            new_category_name: String::new(),
+            products_slot: None,
+            categories_slot: None,
+            sales_docs: Vec::new(),
+            new_sales_party_id: String::new(),
+            new_sales_desc: String::new(),
+            new_sales_price: "0".into(),
+            sales_slot: None,
+            payments: Vec::new(),
+            bank_accounts: Vec::new(),
+            allocations: Vec::new(),
+            new_bank_name: String::new(),
+            new_bank_currency: "AUD".into(),
+            new_pay_party_id: String::new(),
+            new_pay_amount: "0".into(),
+            new_pay_ref: String::new(),
+            alloc_payment_id: String::new(),
+            alloc_document_id: String::new(),
+            alloc_amount: "0".into(),
+            payments_slot: None,
+            banks_slot: None,
+            allocs_slot: None,
+            warehouses: Vec::new(),
+            stock_levels: Vec::new(),
+            stock_moves: Vec::new(),
+            new_wh_code: String::new(),
+            new_wh_name: String::new(),
+            new_move_product_id: String::new(),
+            new_move_qty: "1".into(),
+            new_move_wh_id: String::new(),
+            warehouses_slot: None,
+            levels_slot: None,
+            moves_slot: None,
+            inventory_error: None,
+            modules: Vec::new(),
+            users: Vec::new(),
+            roles: Vec::new(),
+            permissions: Vec::new(),
+            new_user_login: String::new(),
+            new_user_display: String::new(),
+            new_user_password: String::new(),
+            modules_slot: None,
+            users_slot: None,
+        }
+    }
+
+    fn role_filter(&self) -> Option<PartyRole> {
+        match self.nav.selected_page {
+            Page::Customers => Some(PartyRole::Customer),
+            Page::Suppliers => Some(PartyRole::Supplier),
+            Page::Prospects => Some(PartyRole::Prospect),
+            _ => None,
         }
     }
 
@@ -81,12 +228,196 @@ impl ReferenceApp {
         self.refresh_slot = Some(slot.clone());
 
         let mut conn = Connection::new(self.rpc_url.clone());
+        let role_filter = self.role_filter();
         spawn_local_fut(async move {
-            let snap = rusterp_api_client::refresh(&mut conn).await;
+            let snap = rusterp_api_client::refresh(&mut conn, role_filter).await;
             if let Ok(mut g) = slot.lock() {
                 *g = Some(Ok(snap));
             }
         });
+    }
+
+    fn poll_detail_slots(&mut self) {
+        if let Some(slot) = self.contacts_slot.as_ref() {
+            if let Some(result) = slot.lock().ok().and_then(|g| g.clone()) {
+                self.contacts_slot = None;
+                match result {
+                    Ok(Ok(rows)) => {
+                        self.contacts = rows;
+                        self.form_error = None;
+                    }
+                    Ok(Err(msg)) | Err(msg) => self.form_error = Some(msg),
+                }
+            }
+        }
+        if let Some(slot) = self.addresses_slot.as_ref() {
+            if let Some(result) = slot.lock().ok().and_then(|g| g.clone()) {
+                self.addresses_slot = None;
+                match result {
+                    Ok(Ok(rows)) => {
+                        self.addresses = rows;
+                        self.form_error = None;
+                    }
+                    Ok(Err(msg)) | Err(msg) => self.form_error = Some(msg),
+                }
+            }
+        }
+    }
+
+    fn submit_create_party(&mut self) {
+        if self.mutate_slot.is_some() || !live_grpc_supported() {
+            return;
+        }
+        let name = self.new_party_name.trim().to_string();
+        if name.is_empty() {
+            self.form_error = Some("Display name is required".into());
+            return;
+        }
+        let mut roles = Vec::new();
+        if self.new_party_customer {
+            roles.push(PartyRole::Customer);
+        }
+        if self.new_party_supplier {
+            roles.push(PartyRole::Supplier);
+        }
+        if self.new_party_prospect {
+            roles.push(PartyRole::Prospect);
+        }
+        if roles.is_empty() {
+            self.form_error = Some("Select at least one role".into());
+            return;
+        }
+        let slot = shared_result();
+        self.mutate_slot = Some(slot.clone());
+        let url = self.rpc_url.clone();
+        spawn_local_fut(async move {
+            let mut conn = Connection::new(url);
+            let result = create_party(&mut conn, name, roles).await.map(|_| ());
+            if let Ok(mut g) = slot.lock() {
+                *g = Some(Ok(result));
+            }
+        });
+    }
+
+    fn request_contacts(&mut self, party_id: String) {
+        if self.contacts_slot.is_some() || !live_grpc_supported() {
+            return;
+        }
+        self.selected_party_id = Some(party_id.clone());
+        let slot = shared_result();
+        self.contacts_slot = Some(slot.clone());
+        let url = self.rpc_url.clone();
+        spawn_local_fut(async move {
+            let mut conn = Connection::new(url);
+            let result = list_contacts(&mut conn, party_id).await;
+            if let Ok(mut g) = slot.lock() {
+                *g = Some(Ok(result));
+            }
+        });
+    }
+
+    fn request_addresses(&mut self, party_id: String) {
+        if self.addresses_slot.is_some() || !live_grpc_supported() {
+            return;
+        }
+        self.selected_party_id = Some(party_id.clone());
+        let slot = shared_result();
+        self.addresses_slot = Some(slot.clone());
+        let url = self.rpc_url.clone();
+        spawn_local_fut(async move {
+            let mut conn = Connection::new(url);
+            let result = list_addresses(&mut conn, party_id).await;
+            if let Ok(mut g) = slot.lock() {
+                *g = Some(Ok(result));
+            }
+        });
+    }
+
+    fn submit_add_contact(&mut self) {
+        let Some(party_id) = self.selected_party_id.clone() else {
+            self.form_error = Some("Select a party first".into());
+            return;
+        };
+        let name = self.new_contact_name.trim().to_string();
+        if name.is_empty() {
+            self.form_error = Some("Contact name is required".into());
+            return;
+        }
+        let email = self.new_contact_email.clone();
+        let phone = self.new_contact_phone.clone();
+        let slot = shared_result();
+        self.mutate_slot = Some(slot.clone());
+        let url = self.rpc_url.clone();
+        spawn_local_fut(async move {
+            let mut conn = Connection::new(url);
+            let result = add_contact(&mut conn, party_id, name, email, phone)
+                .await
+                .map(|_| ());
+            if let Ok(mut g) = slot.lock() {
+                *g = Some(Ok(result));
+            }
+        });
+        self.new_contact_name.clear();
+        self.new_contact_email.clear();
+        self.new_contact_phone.clear();
+    }
+
+    fn submit_add_address(&mut self) {
+        let Some(party_id) = self.selected_party_id.clone() else {
+            self.form_error = Some("Select a party first".into());
+            return;
+        };
+        let line1 = self.new_address_line1.trim().to_string();
+        let city = self.new_address_city.trim().to_string();
+        if line1.is_empty() || city.is_empty() {
+            self.form_error = Some("Line1 and city are required".into());
+            return;
+        }
+        let country = self.new_address_country.clone();
+        let slot = shared_result();
+        self.mutate_slot = Some(slot.clone());
+        let url = self.rpc_url.clone();
+        spawn_local_fut(async move {
+            let mut conn = Connection::new(url);
+            let result = add_address(&mut conn, party_id, line1, city, country)
+                .await
+                .map(|_| ());
+            if let Ok(mut g) = slot.lock() {
+                *g = Some(Ok(result));
+            }
+        });
+        self.new_address_line1.clear();
+        self.new_address_city.clear();
+    }
+
+    fn poll_mutate_slot(&mut self) {
+        let Some(slot) = self.mutate_slot.as_ref() else {
+            return;
+        };
+        let maybe = slot.lock().ok().and_then(|g| g.clone());
+        let Some(result) = maybe else {
+            return;
+        };
+        self.mutate_slot = None;
+        match result {
+            Ok(Ok(())) => {
+                self.form_error = None;
+                self.new_party_name.clear();
+                if self.nav.selected_page.is_live_parties_list() {
+                    self.request_refresh();
+                } else if let Some(id) = self.selected_party_id.clone() {
+                    if self.nav.selected_page.is_live_contacts() {
+                        self.request_contacts(id);
+                    } else if self.nav.selected_page.is_live_addresses() {
+                        self.request_addresses(id);
+                    }
+                }
+                self.reload_active_domain();
+            }
+            Ok(Err(msg)) | Err(msg) => {
+                self.form_error = Some(msg);
+            }
+        }
     }
 
     fn poll_refresh_slot(&mut self) {
@@ -237,6 +568,9 @@ impl ReferenceApp {
             );
             if row.clicked() {
                 let _ = self.nav.select_page(page);
+                if page.is_live_parties_list() {
+                    self.request_refresh();
+                }
             }
         }
     }
@@ -278,8 +612,30 @@ impl ReferenceApp {
 
     fn draw_parties_content(&mut self, ui: &mut egui::Ui) {
         ui.heading(self.nav.selected_page.label());
-        if let Some(note) = self.nav.customers_suppliers_unfiltered_note() {
-            ui.label(egui::RichText::new(note).italics().small());
+        ui.add_space(4.0);
+
+        ui.collapsing("New party", |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Name");
+                ui.text_edit_singleline(&mut self.new_party_name);
+            });
+            ui.horizontal(|ui| {
+                ui.checkbox(&mut self.new_party_customer, "Customer");
+                ui.checkbox(&mut self.new_party_supplier, "Supplier");
+                ui.checkbox(&mut self.new_party_prospect, "Prospect");
+            });
+            if ui
+                .add_enabled(
+                    live_grpc_supported() && self.mutate_slot.is_none(),
+                    egui::Button::new("Create").fill(tokens::ACCENT),
+                )
+                .clicked()
+            {
+                self.submit_create_party();
+            }
+        });
+        if let Some(err) = &self.form_error {
+            ui.colored_label(tokens::ERROR, err);
         }
         ui.add_space(4.0);
 
@@ -357,6 +713,178 @@ impl ReferenceApp {
         }
     }
 
+    fn ensure_parties_loaded(&mut self) {
+        if self.parties.is_empty()
+            && live_grpc_supported()
+            && !self.refresh_in_flight()
+            && self.status != ConnectionStatus::Connecting
+        {
+            self.request_refresh();
+        }
+    }
+
+    fn draw_contacts_content(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Contacts");
+        self.ensure_parties_loaded();
+        ui.add_space(4.0);
+        ui.label("Party");
+        egui::ComboBox::from_id_salt("contact_party")
+            .selected_text(
+                self.selected_party_id
+                    .as_ref()
+                    .and_then(|id| {
+                        self.parties
+                            .iter()
+                            .find(|p| &p.id == id)
+                            .map(|p| p.display_name.as_str())
+                    })
+                    .unwrap_or("Select party…"),
+            )
+            .show_ui(ui, |ui| {
+                for p in self.parties.clone() {
+                    if ui
+                        .selectable_label(
+                            self.selected_party_id.as_deref() == Some(p.id.as_str()),
+                            &p.display_name,
+                        )
+                        .clicked()
+                    {
+                        self.request_contacts(p.id);
+                    }
+                }
+            });
+
+        ui.add_space(8.0);
+        ui.collapsing("Add contact", |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Name");
+                ui.text_edit_singleline(&mut self.new_contact_name);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Email");
+                ui.text_edit_singleline(&mut self.new_contact_email);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Phone");
+                ui.text_edit_singleline(&mut self.new_contact_phone);
+            });
+            if ui.button("Add").clicked() {
+                self.submit_add_contact();
+            }
+        });
+        if let Some(err) = &self.form_error {
+            ui.colored_label(tokens::ERROR, err);
+        }
+        ui.add_space(8.0);
+        if self.selected_party_id.is_none() {
+            ui.label("Select a party to list contacts.");
+            return;
+        }
+        if self.contacts.is_empty() {
+            ui.label("No contacts for this party.");
+            return;
+        }
+        egui::Grid::new("contacts_grid")
+            .striped(true)
+            .num_columns(4)
+            .show(ui, |ui| {
+                ui.strong("Name");
+                ui.strong("Email");
+                ui.strong("Phone");
+                ui.strong("Id");
+                ui.end_row();
+                for c in &self.contacts {
+                    ui.label(&c.name);
+                    ui.label(&c.email);
+                    ui.label(&c.phone);
+                    ui.monospace(&c.id);
+                    ui.end_row();
+                }
+            });
+    }
+
+    fn draw_addresses_content(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Addresses");
+        self.ensure_parties_loaded();
+        ui.add_space(4.0);
+        ui.label("Party");
+        egui::ComboBox::from_id_salt("address_party")
+            .selected_text(
+                self.selected_party_id
+                    .as_ref()
+                    .and_then(|id| {
+                        self.parties
+                            .iter()
+                            .find(|p| &p.id == id)
+                            .map(|p| p.display_name.as_str())
+                    })
+                    .unwrap_or("Select party…"),
+            )
+            .show_ui(ui, |ui| {
+                for p in self.parties.clone() {
+                    if ui
+                        .selectable_label(
+                            self.selected_party_id.as_deref() == Some(p.id.as_str()),
+                            &p.display_name,
+                        )
+                        .clicked()
+                    {
+                        self.request_addresses(p.id);
+                    }
+                }
+            });
+
+        ui.add_space(8.0);
+        ui.collapsing("Add address (billing)", |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Line 1");
+                ui.text_edit_singleline(&mut self.new_address_line1);
+            });
+            ui.horizontal(|ui| {
+                ui.label("City");
+                ui.text_edit_singleline(&mut self.new_address_city);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Country");
+                ui.text_edit_singleline(&mut self.new_address_country);
+            });
+            if ui.button("Add").clicked() {
+                self.submit_add_address();
+            }
+        });
+        if let Some(err) = &self.form_error {
+            ui.colored_label(tokens::ERROR, err);
+        }
+        ui.add_space(8.0);
+        if self.selected_party_id.is_none() {
+            ui.label("Select a party to list addresses.");
+            return;
+        }
+        if self.addresses.is_empty() {
+            ui.label("No addresses for this party.");
+            return;
+        }
+        egui::Grid::new("addresses_grid")
+            .striped(true)
+            .num_columns(5)
+            .show(ui, |ui| {
+                ui.strong("Kind");
+                ui.strong("Line 1");
+                ui.strong("City");
+                ui.strong("Country");
+                ui.strong("Id");
+                ui.end_row();
+                for a in &self.addresses {
+                    ui.label(&a.kind);
+                    ui.label(&a.line1);
+                    ui.label(&a.city);
+                    ui.label(&a.country);
+                    ui.monospace(&a.id);
+                    ui.end_row();
+                }
+            });
+    }
+
     fn draw_settings_content(&mut self, ui: &mut egui::Ui) {
         ui.heading("Settings");
         ui.add_space(4.0);
@@ -386,93 +914,11 @@ impl ReferenceApp {
     }
 
     fn draw_settings_modules(&mut self, ui: &mut egui::Ui) {
-        ui.label(egui::RichText::new("Modules").strong());
-        ui.add_space(4.0);
-        ui.label(
-            egui::RichText::new(
-                "Static mirror of core.modules seed — synced from platform API when it lands.",
-            )
-            .small()
-            .weak(),
-        );
-        ui.add_space(8.0);
-
-        struct ModuleRow {
-            id: &'static str,
-            name: &'static str,
-            enabled: bool,
-            always_on: bool,
-        }
-
-        let rows = [
-            ModuleRow {
-                id: "core",
-                name: "Core Platform",
-                enabled: true,
-                always_on: true,
-            },
-            ModuleRow {
-                id: "parties",
-                name: "Parties",
-                enabled: true,
-                always_on: false,
-            },
-            ModuleRow {
-                id: "catalog",
-                name: "Catalog",
-                enabled: true,
-                always_on: false,
-            },
-            ModuleRow {
-                id: "sales",
-                name: "Sales",
-                enabled: true,
-                always_on: false,
-            },
-            ModuleRow {
-                id: "payments",
-                name: "Payments",
-                enabled: true,
-                always_on: false,
-            },
-            ModuleRow {
-                id: "inventory",
-                name: "Inventory",
-                enabled: false,
-                always_on: false,
-            },
-        ];
-
-        egui::Grid::new("modules_grid")
-            .striped(true)
-            .num_columns(4)
-            .min_col_width(80.0)
-            .show(ui, |ui| {
-                ui.strong("id");
-                ui.strong("name");
-                ui.strong("enabled");
-                ui.strong("always_on");
-                ui.end_row();
-                for row in rows {
-                    ui.monospace(row.id);
-                    ui.label(row.name);
-                    ui.label(if row.enabled { "yes" } else { "no" });
-                    ui.label(if row.always_on { "yes" } else { "no" });
-                    ui.end_row();
-                }
-            });
+        self.draw_live_modules(ui);
     }
 
     fn draw_settings_users_roles(&mut self, ui: &mut egui::Ui) {
-        draw_wireframe_stub(
-            ui,
-            "Users & Roles",
-            &crate::shell::WireframeMeta {
-                schema_path: "auth.users, auth.roles, auth.permissions",
-                tier_label: "MVP schema",
-                description: "Classic RBAC — users, groups, roles, resource:action permissions.",
-            },
-        );
+        self.draw_live_users_roles(ui);
     }
 
     fn draw_settings_connection(&mut self, ui: &mut egui::Ui) {
@@ -543,9 +989,22 @@ impl ReferenceApp {
     fn draw_content(&mut self, ui: &mut egui::Ui) {
         ui.set_width(ui.available_width());
         match self.nav.selected_page {
-            Page::AllParties | Page::Customers | Page::Suppliers => {
+            Page::AllParties | Page::Customers | Page::Suppliers | Page::Prospects => {
                 self.draw_parties_content(ui);
             }
+            Page::Contacts => self.draw_contacts_content(ui),
+            Page::Addresses => self.draw_addresses_content(ui),
+            Page::Products => self.draw_products_content(ui),
+            Page::Categories => self.draw_categories_content(ui),
+            Page::Quotes | Page::Orders | Page::Invoices | Page::CreditNotes => {
+                self.draw_sales_content(ui);
+            }
+            Page::PaymentsList => self.draw_payments_content(ui),
+            Page::BankAccounts => self.draw_bank_accounts_content(ui),
+            Page::Allocations => self.draw_allocations_content(ui),
+            Page::Warehouses => self.draw_warehouses_content(ui),
+            Page::StockLevels => self.draw_stock_levels_content(ui),
+            Page::StockMoves => self.draw_stock_moves_content(ui),
             Page::SettingsHost => {
                 self.draw_settings_content(ui);
             }
@@ -568,8 +1027,16 @@ impl eframe::App for ReferenceApp {
         }
 
         self.poll_refresh_slot();
+        self.poll_mutate_slot();
+        self.poll_detail_slots();
+        self.poll_domain_slots();
 
-        if self.refresh_in_flight() {
+        if self.refresh_in_flight()
+            || self.mutate_slot.is_some()
+            || self.contacts_slot.is_some()
+            || self.addresses_slot.is_some()
+            || self.domain_slots_busy()
+        {
             ui.ctx().request_repaint();
         }
 

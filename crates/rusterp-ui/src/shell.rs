@@ -94,12 +94,13 @@ impl Domain {
 
     pub fn tier(self) -> DomainTier {
         match self {
-            Self::Parties | Self::Settings => DomainTier::Live,
-            Self::Home
+            Self::Parties
             | Self::Catalog
             | Self::Sales
             | Self::Payments
-            | Self::Inventory => DomainTier::Wireframe,
+            | Self::Inventory
+            | Self::Settings => DomainTier::Live,
+            Self::Home => DomainTier::Wireframe,
             Self::Purchasing
             | Self::Accounting
             | Self::Crm
@@ -231,11 +232,55 @@ impl Page {
     }
 
     pub fn is_live_parties_list(self) -> bool {
-        matches!(self, Self::AllParties | Self::Customers | Self::Suppliers)
+        matches!(
+            self,
+            Self::AllParties | Self::Customers | Self::Suppliers | Self::Prospects
+        )
+    }
+
+    pub fn is_live_contacts(self) -> bool {
+        matches!(self, Self::Contacts)
+    }
+
+    pub fn is_live_addresses(self) -> bool {
+        matches!(self, Self::Addresses)
+    }
+
+    pub fn is_live_catalog(self) -> bool {
+        matches!(self, Self::Products | Self::Categories)
+    }
+
+    pub fn is_live_sales(self) -> bool {
+        matches!(
+            self,
+            Self::Quotes | Self::Orders | Self::Invoices | Self::CreditNotes
+        )
+    }
+
+    pub fn is_live_payments(self) -> bool {
+        matches!(
+            self,
+            Self::PaymentsList | Self::BankAccounts | Self::Allocations
+        )
+    }
+
+    pub fn is_live_inventory(self) -> bool {
+        matches!(
+            self,
+            Self::Warehouses | Self::StockLevels | Self::StockMoves
+        )
     }
 
     pub fn wireframe_meta(self) -> Option<WireframeMeta> {
-        if self.is_live_parties_list() || self == Self::SettingsHost {
+        if self.is_live_parties_list()
+            || self.is_live_contacts()
+            || self.is_live_addresses()
+            || self.is_live_catalog()
+            || self.is_live_sales()
+            || self.is_live_payments()
+            || self.is_live_inventory()
+            || self == Self::SettingsHost
+        {
             return None;
         }
         Some(match self {
@@ -243,31 +288,6 @@ impl Page {
                 schema_path: "core.settings",
                 tier_label: "MVP schema",
                 description: "Org overview and key metrics — platform dashboard.",
-            },
-            Self::Prospects => WireframeMeta {
-                schema_path: "party.parties + party.party_roles",
-                tier_label: "MVP schema",
-                description: "Parties with prospect role filter.",
-            },
-            Self::Contacts => WireframeMeta {
-                schema_path: "party.contacts",
-                tier_label: "MVP schema",
-                description: "Contacts belonging to parties.",
-            },
-            Self::Addresses => WireframeMeta {
-                schema_path: "party.addresses",
-                tier_label: "MVP schema",
-                description: "Billing, shipping, and other addresses.",
-            },
-            Self::Products => WireframeMeta {
-                schema_path: "catalog.products",
-                tier_label: "MVP schema",
-                description: "Stock, service, and consumable products.",
-            },
-            Self::Categories => WireframeMeta {
-                schema_path: "catalog.product_categories",
-                tier_label: "MVP schema",
-                description: "Hierarchical product categories.",
             },
             Self::UnitsOfMeasure => WireframeMeta {
                 schema_path: "catalog.units_of_measure",
@@ -278,56 +298,6 @@ impl Page {
                 schema_path: "catalog.price_lists / catalog.prices",
                 tier_label: "MVP schema",
                 description: "Named price lists and product prices.",
-            },
-            Self::Quotes => WireframeMeta {
-                schema_path: "sales.sales_documents (kind = quote)",
-                tier_label: "MVP schema",
-                description: "Sales quotes — first step in the pipeline.",
-            },
-            Self::Orders => WireframeMeta {
-                schema_path: "sales.sales_documents (kind = order)",
-                tier_label: "MVP schema",
-                description: "Confirmed sales orders.",
-            },
-            Self::Invoices => WireframeMeta {
-                schema_path: "sales.sales_documents (kind = invoice)",
-                tier_label: "MVP schema",
-                description: "Posted customer invoices.",
-            },
-            Self::CreditNotes => WireframeMeta {
-                schema_path: "sales.sales_documents (kind = credit_note)",
-                tier_label: "MVP schema",
-                description: "Credit notes against invoices.",
-            },
-            Self::PaymentsList => WireframeMeta {
-                schema_path: "payment.payments",
-                tier_label: "MVP schema",
-                description: "Inbound and outbound payment records.",
-            },
-            Self::BankAccounts => WireframeMeta {
-                schema_path: "payment.bank_accounts",
-                tier_label: "MVP schema",
-                description: "Organisation bank accounts.",
-            },
-            Self::Allocations => WireframeMeta {
-                schema_path: "payment.payment_allocations",
-                tier_label: "MVP schema",
-                description: "Payment allocations to invoices.",
-            },
-            Self::Warehouses => WireframeMeta {
-                schema_path: "inventory.warehouses",
-                tier_label: "MVP schema",
-                description: "Warehouse and location master data.",
-            },
-            Self::StockLevels => WireframeMeta {
-                schema_path: "inventory.stock_levels",
-                tier_label: "MVP schema",
-                description: "On-hand and reserved quantities per warehouse.",
-            },
-            Self::StockMoves => WireframeMeta {
-                schema_path: "inventory.stock_moves",
-                tier_label: "MVP schema",
-                description: "Stock transfers and delivery moves.",
             },
             Self::PurchaseOrders => WireframeMeta {
                 schema_path: "purchase.purchase_orders",
@@ -359,9 +329,7 @@ impl Page {
                 tier_label: "Post-MVP stub",
                 description: "Bills of materials stub.",
             },
-            Self::AllParties | Self::Customers | Self::Suppliers | Self::SettingsHost => {
-                return None;
-            }
+            _ => return None,
         })
     }
 }
@@ -505,10 +473,14 @@ impl ShellNav {
     }
 
     pub fn customers_suppliers_unfiltered_note(&self) -> Option<&'static str> {
+        None
+    }
+
+    pub fn role_filter_for_page(&self) -> Option<&'static str> {
         match self.selected_page {
-            Page::Customers | Page::Suppliers => {
-                Some("Role filter not enabled yet — showing full list from core.")
-            }
+            Page::Customers => Some("customer"),
+            Page::Suppliers => Some("supplier"),
+            Page::Prospects => Some("prospect"),
             _ => None,
         }
     }
@@ -573,24 +545,29 @@ mod tests {
     }
 
     #[test]
-    fn sales_pages_map_to_schema() {
+    fn sales_pages_are_live() {
         let pages = pages_for_domain(Domain::Sales);
         assert_eq!(pages.len(), 4);
-        assert!(Page::Quotes.wireframe_meta().is_some());
-        assert!(Page::Invoices.wireframe_meta().unwrap().schema_path.contains("invoice"));
+        assert!(Page::Quotes.wireframe_meta().is_none());
+        assert!(Page::Invoices.is_live_sales());
     }
 
     #[test]
     fn live_parties_pages_have_no_wireframe_meta() {
         assert!(Page::AllParties.wireframe_meta().is_none());
         assert!(Page::Customers.wireframe_meta().is_none());
-        assert!(Page::Prospects.wireframe_meta().is_some());
+        assert!(Page::Prospects.wireframe_meta().is_none());
+        assert!(Page::Contacts.wireframe_meta().is_none());
+        assert!(Page::Addresses.wireframe_meta().is_none());
+        assert!(Page::Products.wireframe_meta().is_none());
+        assert!(Page::Warehouses.wireframe_meta().is_none());
     }
 
     #[test]
     fn future_stub_tier() {
         assert_eq!(Domain::Manufacturing.tier(), DomainTier::FutureStub);
-        assert_eq!(Domain::Catalog.tier(), DomainTier::Wireframe);
+        assert_eq!(Domain::Catalog.tier(), DomainTier::Live);
         assert_eq!(Domain::Parties.tier(), DomainTier::Live);
+        assert_eq!(Domain::Home.tier(), DomainTier::Wireframe);
     }
 }

@@ -15,6 +15,7 @@ pub struct SalesDocRow {
     pub number: String,
     pub party_id: String,
     pub total_minor: i64,
+    pub notes: String,
 }
 
 fn kind_label(k: i32) -> &'static str {
@@ -63,6 +64,7 @@ pub async fn list_sales_documents(
             number: d.number,
             party_id: d.party_id,
             total_minor: d.total_minor,
+            notes: d.notes,
         })
         .collect())
 }
@@ -98,6 +100,7 @@ pub async fn create_sales_document(
         number: d.number,
         party_id: d.party_id,
         total_minor: d.total_minor,
+        notes: d.notes,
     })
 }
 
@@ -126,5 +129,36 @@ pub async fn set_sales_document_status(
         number: d.number,
         party_id: d.party_id,
         total_minor: d.total_minor,
+        notes: d.notes,
+    })
+}
+
+pub async fn update_sales_document(
+    conn: &mut Connection,
+    id: String,
+    notes: String,
+) -> Result<SalesDocRow, String> {
+    conn.connect();
+    let channel = conn
+        .channel()
+        .ok_or_else(|| "failed to open WebSocket channel".to_string())?;
+    let mut client = SalesServiceClient::new(channel);
+    use crate::proto::sales::v1::UpdateSalesDocumentRequest;
+    let d = client
+        .update_sales_document(UpdateSalesDocumentRequest {
+            id,
+            notes: Some(notes),
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    Ok(SalesDocRow {
+        id: d.id,
+        kind: kind_label(d.kind).into(),
+        status: status_label(d.status).into(),
+        number: d.number,
+        party_id: d.party_id,
+        total_minor: d.total_minor,
+        notes: d.notes,
     })
 }

@@ -78,6 +78,37 @@ pub async fn create_warehouse(
     })
 }
 
+pub async fn update_warehouse(
+    conn: &mut Connection,
+    id: String,
+    code: String,
+    name: String,
+    active: bool,
+) -> Result<WarehouseRow, String> {
+    conn.connect();
+    let channel = conn
+        .channel()
+        .ok_or_else(|| "failed to open WebSocket channel".to_string())?;
+    let mut client = InventoryServiceClient::new(channel);
+    use crate::proto::inventory::v1::UpdateWarehouseRequest;
+    let w = client
+        .update_warehouse(UpdateWarehouseRequest {
+            id,
+            code: Some(code),
+            name: Some(name),
+            active: Some(active),
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    Ok(WarehouseRow {
+        id: w.id,
+        code: w.code,
+        name: w.name,
+        active: w.active,
+    })
+}
+
 pub async fn list_stock_levels(conn: &mut Connection) -> Result<Vec<StockLevelRow>, String> {
     conn.connect();
     let channel = conn

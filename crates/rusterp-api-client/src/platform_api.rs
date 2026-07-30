@@ -178,3 +178,34 @@ pub async fn create_user(
         active: u.active,
     })
 }
+
+pub async fn update_user(
+    conn: &mut Connection,
+    id: String,
+    display_name: String,
+    active: bool,
+    password: Option<String>,
+) -> Result<UserRow, String> {
+    conn.connect();
+    let channel = conn
+        .channel()
+        .ok_or_else(|| "failed to open WebSocket channel".to_string())?;
+    let mut client = AuthServiceClient::new(channel);
+    use crate::proto::platform::v1::UpdateUserRequest;
+    let u = client
+        .update_user(UpdateUserRequest {
+            id,
+            display_name: Some(display_name),
+            active: Some(active),
+            password,
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    Ok(UserRow {
+        id: u.id,
+        login: u.login,
+        display_name: u.display_name,
+        active: u.active,
+    })
+}

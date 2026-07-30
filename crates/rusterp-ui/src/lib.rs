@@ -2,6 +2,7 @@
 
 mod app;
 mod domains;
+mod forms;
 mod shell;
 mod wireframe;
 

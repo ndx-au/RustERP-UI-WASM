@@ -7,6 +7,7 @@ pub struct PartyRow {
     pub display_name: String,
     /// Human-readable role labels (e.g. `customer`, `supplier`).
     pub roles: Vec<String>,
+    pub active: bool,
 }
 
 /// Map a `rusterp.party.v1.PartyRole` wire value to a short label.
@@ -27,6 +28,15 @@ pub fn party_row_from_parts(
     display_name: impl Into<String>,
     role_values: &[i32],
 ) -> PartyRow {
+    party_row_from_parts_active(id, display_name, role_values, true)
+}
+
+pub fn party_row_from_parts_active(
+    id: impl Into<String>,
+    display_name: impl Into<String>,
+    role_values: &[i32],
+    active: bool,
+) -> PartyRow {
     let roles = role_values
         .iter()
         .copied()
@@ -37,6 +47,7 @@ pub fn party_row_from_parts(
         id: id.into(),
         display_name: display_name.into(),
         roles,
+        active,
     }
 }
 

@@ -85,6 +85,40 @@ pub async fn create_product(
     })
 }
 
+pub async fn update_product(
+    conn: &mut Connection,
+    id: String,
+    sku: String,
+    name: String,
+    active: bool,
+) -> Result<ProductRow, String> {
+    conn.connect();
+    let channel = conn
+        .channel()
+        .ok_or_else(|| "failed to open WebSocket channel".to_string())?;
+    let mut client = CatalogServiceClient::new(channel);
+    use crate::proto::catalog::v1::UpdateProductRequest;
+    let p = client
+        .update_product(UpdateProductRequest {
+            id,
+            sku: Some(sku),
+            name: Some(name),
+            r#type: None,
+            category_id: None,
+            active: Some(active),
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    Ok(ProductRow {
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        type_label: product_type_label(p.r#type).into(),
+        active: p.active,
+    })
+}
+
 pub async fn list_categories(conn: &mut Connection) -> Result<Vec<CategoryRow>, String> {
     conn.connect();
     let channel = conn
@@ -117,6 +151,35 @@ pub async fn create_category(conn: &mut Connection, name: String) -> Result<Cate
         .create_category(CreateCategoryRequest {
             name,
             parent_id: None,
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    Ok(CategoryRow {
+        id: c.id,
+        name: c.name,
+        active: c.active,
+    })
+}
+
+pub async fn update_category(
+    conn: &mut Connection,
+    id: String,
+    name: String,
+    active: bool,
+) -> Result<CategoryRow, String> {
+    conn.connect();
+    let channel = conn
+        .channel()
+        .ok_or_else(|| "failed to open WebSocket channel".to_string())?;
+    let mut client = CatalogServiceClient::new(channel);
+    use crate::proto::catalog::v1::UpdateCategoryRequest;
+    let c = client
+        .update_category(UpdateCategoryRequest {
+            id,
+            name: Some(name),
+            parent_id: None,
+            active: Some(active),
         })
         .await
         .map_err(|e| e.to_string())?

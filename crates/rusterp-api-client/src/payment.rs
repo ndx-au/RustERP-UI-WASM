@@ -88,6 +88,37 @@ pub async fn create_bank_account(
     })
 }
 
+pub async fn update_bank_account(
+    conn: &mut Connection,
+    id: String,
+    name: String,
+    currency: String,
+    active: bool,
+) -> Result<BankAccountRow, String> {
+    conn.connect();
+    let channel = conn
+        .channel()
+        .ok_or_else(|| "failed to open WebSocket channel".to_string())?;
+    let mut client = PaymentServiceClient::new(channel);
+    use crate::proto::payment::v1::UpdateBankAccountRequest;
+    let a = client
+        .update_bank_account(UpdateBankAccountRequest {
+            id,
+            name: Some(name),
+            currency: Some(currency),
+            active: Some(active),
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    Ok(BankAccountRow {
+        id: a.id,
+        name: a.name,
+        currency: a.currency,
+        active: a.active,
+    })
+}
+
 pub async fn list_payments(conn: &mut Connection) -> Result<Vec<PaymentRow>, String> {
     conn.connect();
     let channel = conn
@@ -134,6 +165,37 @@ pub async fn create_payment(
             amount_minor,
             currency,
             reference,
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    Ok(PaymentRow {
+        id: p.id,
+        direction: dir_label(p.direction).into(),
+        party_id: p.party_id,
+        amount_minor: p.amount_minor,
+        currency: p.currency,
+        reference: p.reference,
+        status: p.status,
+    })
+}
+
+pub async fn update_payment(
+    conn: &mut Connection,
+    id: String,
+    reference: String,
+) -> Result<PaymentRow, String> {
+    conn.connect();
+    let channel = conn
+        .channel()
+        .ok_or_else(|| "failed to open WebSocket channel".to_string())?;
+    let mut client = PaymentServiceClient::new(channel);
+    use crate::proto::payment::v1::UpdatePaymentRequest;
+    let p = client
+        .update_payment(UpdatePaymentRequest {
+            id,
+            reference: Some(reference),
+            bank_account_id: None,
         })
         .await
         .map_err(|e| e.to_string())?

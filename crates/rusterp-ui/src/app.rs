@@ -1,5 +1,6 @@
 //! Reference shell chrome: rail + domain menu + top bar + content host.
 
+use crate::forms::{focus_once, form_keys, text_field};
 use crate::shell::{
     pages_for_domain, tokens, Domain, DomainTier, Page, SettingsTab, ShellNav,
 };
@@ -7,10 +8,11 @@ use crate::wireframe::draw_wireframe_stub;
 use rusterp_api_client::{
     add_address, add_contact, create_party, default_rpc_url, list_addresses, list_contacts,
     live_grpc_supported, live_grpc_unavailable_reason, normalize_rpc_url, shared_result,
-    spawn_local_fut, AddressRow, AllocationRow, BankAccountRow, CategoryRow, Connection,
-    ConnectionStatus, ContactRow, ModuleRow, PartyRole, PartyRow, PaymentRow, PermissionRow,
-    ProductRow, RefreshSnapshot, RoleRow, SalesDocRow, SharedResult, StockLevelRow, StockMoveRow,
-    UserRow, WarehouseRow, DEFAULT_RPC_URL, ENDPOINT_ENV, RPC_URL_ENV,
+    spawn_local_fut, update_address, update_contact, update_party, AddressRow, AllocationRow,
+    BankAccountRow, CategoryRow, Connection, ConnectionStatus, ContactRow, ModuleRow, PartyRole,
+    PartyRow, PaymentRow, PermissionRow, ProductRow, RefreshSnapshot, RoleRow, SalesDocRow,
+    SharedResult, StockLevelRow, StockMoveRow, UserRow, WarehouseRow, DEFAULT_RPC_URL,
+    ENDPOINT_ENV, RPC_URL_ENV,
 };
 
 /// App version string for Settings → About (workspace package version).
@@ -97,6 +99,76 @@ pub struct ReferenceApp {
     pub(crate) new_user_password: String,
     pub(crate) modules_slot: Option<SharedResult<Result<Vec<ModuleRow>, String>>>,
     pub(crate) users_slot: Option<SharedResult<Result<(Vec<UserRow>, Vec<RoleRow>, Vec<PermissionRow>), String>>>,
+    // Edit — parties
+    pub(crate) selected_edit_party_id: Option<String>,
+    pub(crate) edit_party_name: String,
+    pub(crate) edit_party_customer: bool,
+    pub(crate) edit_party_supplier: bool,
+    pub(crate) edit_party_prospect: bool,
+    pub(crate) edit_party_active: bool,
+    pub(crate) focus_create_party: bool,
+    pub(crate) focus_edit_party: bool,
+    // Edit — contacts
+    pub(crate) selected_edit_contact_id: Option<String>,
+    pub(crate) edit_contact_name: String,
+    pub(crate) edit_contact_email: String,
+    pub(crate) edit_contact_phone: String,
+    pub(crate) edit_contact_active: bool,
+    pub(crate) focus_create_contact: bool,
+    pub(crate) focus_edit_contact: bool,
+    // Edit — addresses
+    pub(crate) selected_edit_address_id: Option<String>,
+    pub(crate) edit_address_line1: String,
+    pub(crate) edit_address_city: String,
+    pub(crate) edit_address_country: String,
+    pub(crate) edit_address_active: bool,
+    pub(crate) focus_create_address: bool,
+    pub(crate) focus_edit_address: bool,
+    // Edit — catalog
+    pub(crate) selected_edit_product_id: Option<String>,
+    pub(crate) edit_product_sku: String,
+    pub(crate) edit_product_name: String,
+    pub(crate) edit_product_active: bool,
+    pub(crate) focus_create_product: bool,
+    pub(crate) focus_edit_product: bool,
+    pub(crate) selected_edit_category_id: Option<String>,
+    pub(crate) edit_category_name: String,
+    pub(crate) edit_category_active: bool,
+    pub(crate) focus_create_category: bool,
+    pub(crate) focus_edit_category: bool,
+    // Edit — sales
+    pub(crate) selected_edit_sales_id: Option<String>,
+    pub(crate) edit_sales_notes: String,
+    pub(crate) edit_sales_status: String,
+    pub(crate) focus_create_sales: bool,
+    pub(crate) focus_edit_sales: bool,
+    // Edit — payments
+    pub(crate) selected_edit_payment_id: Option<String>,
+    pub(crate) edit_payment_ref: String,
+    pub(crate) focus_create_payment: bool,
+    pub(crate) focus_edit_payment: bool,
+    pub(crate) selected_edit_bank_id: Option<String>,
+    pub(crate) edit_bank_name: String,
+    pub(crate) edit_bank_currency: String,
+    pub(crate) edit_bank_active: bool,
+    pub(crate) focus_create_bank: bool,
+    pub(crate) focus_edit_bank: bool,
+    // Edit — inventory
+    pub(crate) selected_edit_warehouse_id: Option<String>,
+    pub(crate) edit_wh_code: String,
+    pub(crate) edit_wh_name: String,
+    pub(crate) edit_wh_active: bool,
+    pub(crate) focus_create_wh: bool,
+    pub(crate) focus_edit_wh: bool,
+    // Edit — users
+    pub(crate) selected_edit_user_id: Option<String>,
+    pub(crate) edit_user_display: String,
+    pub(crate) edit_user_active: bool,
+    pub(crate) edit_user_password: String,
+    pub(crate) focus_create_user: bool,
+    pub(crate) focus_edit_user: bool,
+    // Modules keyboard focus
+    pub(crate) selected_module_id: Option<String>,
 }
 
 impl ReferenceApp {
@@ -192,6 +264,67 @@ impl ReferenceApp {
             new_user_password: String::new(),
             modules_slot: None,
             users_slot: None,
+            selected_edit_party_id: None,
+            edit_party_name: String::new(),
+            edit_party_customer: false,
+            edit_party_supplier: false,
+            edit_party_prospect: false,
+            edit_party_active: true,
+            focus_create_party: false,
+            focus_edit_party: false,
+            selected_edit_contact_id: None,
+            edit_contact_name: String::new(),
+            edit_contact_email: String::new(),
+            edit_contact_phone: String::new(),
+            edit_contact_active: true,
+            focus_create_contact: false,
+            focus_edit_contact: false,
+            selected_edit_address_id: None,
+            edit_address_line1: String::new(),
+            edit_address_city: String::new(),
+            edit_address_country: String::new(),
+            edit_address_active: true,
+            focus_create_address: false,
+            focus_edit_address: false,
+            selected_edit_product_id: None,
+            edit_product_sku: String::new(),
+            edit_product_name: String::new(),
+            edit_product_active: true,
+            focus_create_product: false,
+            focus_edit_product: false,
+            selected_edit_category_id: None,
+            edit_category_name: String::new(),
+            edit_category_active: true,
+            focus_create_category: false,
+            focus_edit_category: false,
+            selected_edit_sales_id: None,
+            edit_sales_notes: String::new(),
+            edit_sales_status: String::new(),
+            focus_create_sales: false,
+            focus_edit_sales: false,
+            selected_edit_payment_id: None,
+            edit_payment_ref: String::new(),
+            focus_create_payment: false,
+            focus_edit_payment: false,
+            selected_edit_bank_id: None,
+            edit_bank_name: String::new(),
+            edit_bank_currency: String::new(),
+            edit_bank_active: true,
+            focus_create_bank: false,
+            focus_edit_bank: false,
+            selected_edit_warehouse_id: None,
+            edit_wh_code: String::new(),
+            edit_wh_name: String::new(),
+            edit_wh_active: true,
+            focus_create_wh: false,
+            focus_edit_wh: false,
+            selected_edit_user_id: None,
+            edit_user_display: String::new(),
+            edit_user_active: true,
+            edit_user_password: String::new(),
+            focus_create_user: false,
+            focus_edit_user: false,
+            selected_module_id: None,
         }
     }
 
@@ -202,6 +335,161 @@ impl ReferenceApp {
             Page::Prospects => Some(PartyRole::Prospect),
             _ => None,
         }
+    }
+
+    pub(crate) fn clear_edit_selections(&mut self) {
+        self.selected_edit_party_id = None;
+        self.selected_edit_contact_id = None;
+        self.selected_edit_address_id = None;
+        self.selected_edit_product_id = None;
+        self.selected_edit_category_id = None;
+        self.selected_edit_sales_id = None;
+        self.selected_edit_payment_id = None;
+        self.selected_edit_bank_id = None;
+        self.selected_edit_warehouse_id = None;
+        self.selected_edit_user_id = None;
+        self.selected_module_id = None;
+    }
+
+    pub(crate) fn cancel_edit(&mut self) {
+        self.clear_edit_selections();
+        self.form_error = None;
+    }
+
+    fn party_roles_from_flags(&self, customer: bool, supplier: bool, prospect: bool) -> Vec<PartyRole> {
+        let mut roles = Vec::new();
+        if customer {
+            roles.push(PartyRole::Customer);
+        }
+        if supplier {
+            roles.push(PartyRole::Supplier);
+        }
+        if prospect {
+            roles.push(PartyRole::Prospect);
+        }
+        roles
+    }
+
+    fn select_party_for_edit(&mut self, p: &PartyRow) {
+        self.selected_edit_party_id = Some(p.id.clone());
+        self.edit_party_name = p.display_name.clone();
+        self.edit_party_customer = p.roles.iter().any(|r| r == "customer");
+        self.edit_party_supplier = p.roles.iter().any(|r| r == "supplier");
+        self.edit_party_prospect = p.roles.iter().any(|r| r == "prospect");
+        self.edit_party_active = p.active;
+        self.focus_edit_party = true;
+    }
+
+    fn submit_edit_party(&mut self) {
+        if self.mutate_slot.is_some() || !live_grpc_supported() {
+            return;
+        }
+        let Some(id) = self.selected_edit_party_id.clone() else {
+            return;
+        };
+        let name = self.edit_party_name.trim().to_string();
+        if name.is_empty() {
+            self.form_error = Some("Display name is required".into());
+            return;
+        }
+        let roles = self.party_roles_from_flags(
+            self.edit_party_customer,
+            self.edit_party_supplier,
+            self.edit_party_prospect,
+        );
+        if roles.is_empty() {
+            self.form_error = Some("Select at least one role".into());
+            return;
+        }
+        let active = self.edit_party_active;
+        let slot = shared_result();
+        self.mutate_slot = Some(slot.clone());
+        let url = self.rpc_url.clone();
+        spawn_local_fut(async move {
+            let mut conn = Connection::new(url);
+            let result = update_party(&mut conn, id, name, roles, active)
+                .await
+                .map(|_| ());
+            if let Ok(mut g) = slot.lock() {
+                *g = Some(Ok(result));
+            }
+        });
+    }
+
+    fn select_contact_for_edit(&mut self, c: &ContactRow) {
+        self.selected_edit_contact_id = Some(c.id.clone());
+        self.edit_contact_name = c.name.clone();
+        self.edit_contact_email = c.email.clone();
+        self.edit_contact_phone = c.phone.clone();
+        self.edit_contact_active = c.active;
+        self.focus_edit_contact = true;
+    }
+
+    fn submit_edit_contact(&mut self) {
+        if self.mutate_slot.is_some() || !live_grpc_supported() {
+            return;
+        }
+        let Some(id) = self.selected_edit_contact_id.clone() else {
+            return;
+        };
+        let name = self.edit_contact_name.trim().to_string();
+        if name.is_empty() {
+            self.form_error = Some("Contact name is required".into());
+            return;
+        }
+        let email = self.edit_contact_email.clone();
+        let phone = self.edit_contact_phone.clone();
+        let active = self.edit_contact_active;
+        let slot = shared_result();
+        self.mutate_slot = Some(slot.clone());
+        let url = self.rpc_url.clone();
+        spawn_local_fut(async move {
+            let mut conn = Connection::new(url);
+            let result = update_contact(&mut conn, id, name, email, phone, active)
+                .await
+                .map(|_| ());
+            if let Ok(mut g) = slot.lock() {
+                *g = Some(Ok(result));
+            }
+        });
+    }
+
+    fn select_address_for_edit(&mut self, a: &AddressRow) {
+        self.selected_edit_address_id = Some(a.id.clone());
+        self.edit_address_line1 = a.line1.clone();
+        self.edit_address_city = a.city.clone();
+        self.edit_address_country = a.country.clone();
+        self.edit_address_active = a.active;
+        self.focus_edit_address = true;
+    }
+
+    fn submit_edit_address(&mut self) {
+        if self.mutate_slot.is_some() || !live_grpc_supported() {
+            return;
+        }
+        let Some(id) = self.selected_edit_address_id.clone() else {
+            return;
+        };
+        let line1 = self.edit_address_line1.trim().to_string();
+        let city = self.edit_address_city.trim().to_string();
+        if line1.is_empty() || city.is_empty() {
+            self.form_error = Some("Line1 and city are required".into());
+            return;
+        }
+        let country = self.edit_address_country.clone();
+        let active = self.edit_address_active;
+        let slot = shared_result();
+        self.mutate_slot = Some(slot.clone());
+        let url = self.rpc_url.clone();
+        spawn_local_fut(async move {
+            let mut conn = Connection::new(url);
+            let result = update_address(&mut conn, id, line1, city, country, active)
+                .await
+                .map(|_| ());
+            if let Ok(mut g) = slot.lock() {
+                *g = Some(Ok(result));
+            }
+        });
     }
 
     fn refresh_in_flight(&self) -> bool {
@@ -403,6 +691,7 @@ impl ReferenceApp {
             Ok(Ok(())) => {
                 self.form_error = None;
                 self.new_party_name.clear();
+                self.clear_edit_selections();
                 if self.nav.selected_page.is_live_parties_list() {
                     self.request_refresh();
                 } else if let Some(id) = self.selected_party_id.clone() {
@@ -615,21 +904,30 @@ impl ReferenceApp {
         ui.add_space(4.0);
 
         ui.collapsing("New party", |ui| {
+            let mut focused = false;
             ui.horizontal(|ui| {
                 ui.label("Name");
-                ui.text_edit_singleline(&mut self.new_party_name);
+                let id = egui::Id::new("create_party_name");
+                focus_once(ui, id, &mut self.focus_create_party);
+                text_field(ui, &mut self.new_party_name, 200.0, "Name", id, &mut focused);
             });
             ui.horizontal(|ui| {
                 ui.checkbox(&mut self.new_party_customer, "Customer");
                 ui.checkbox(&mut self.new_party_supplier, "Supplier");
                 ui.checkbox(&mut self.new_party_prospect, "Prospect");
             });
-            if ui
-                .add_enabled(
-                    live_grpc_supported() && self.mutate_slot.is_none(),
-                    egui::Button::new("Create").fill(tokens::ACCENT),
-                )
-                .clicked()
+            let keys = form_keys(ui, focused);
+            if keys.cancel {
+                self.new_party_name.clear();
+            }
+            if (keys.submit
+                || ui
+                    .add_enabled(
+                        live_grpc_supported() && self.mutate_slot.is_none(),
+                        egui::Button::new("Create").fill(tokens::ACCENT),
+                    )
+                    .clicked())
+                && !keys.cancel
             {
                 self.submit_create_party();
             }
@@ -691,24 +989,69 @@ impl ReferenceApp {
                 ui.label("Connected — no parties on the server (honest empty list).");
             }
             ConnectionStatus::Connected => {
+                let parties: Vec<_> = self.parties.clone();
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     egui::Grid::new("parties_grid")
                         .striped(true)
-                        .num_columns(3)
+                        .num_columns(4)
                         .min_col_width(120.0)
                         .show(ui, |ui| {
                             ui.strong("Display name");
                             ui.strong("Roles");
+                            ui.strong("Active");
                             ui.strong("Id");
                             ui.end_row();
-                            for p in &self.parties {
-                                ui.label(&p.display_name);
+                            for p in &parties {
+                                let selected = self.selected_edit_party_id.as_deref() == Some(p.id.as_str());
+                                if ui.selectable_label(selected, &p.display_name).clicked() {
+                                    self.select_party_for_edit(p);
+                                }
                                 ui.label(p.roles.join(", "));
+                                ui.label(if p.active { "yes" } else { "no" });
                                 ui.monospace(&p.id);
                                 ui.end_row();
                             }
                         });
                 });
+
+                if self.selected_edit_party_id.is_some() {
+                    ui.add_space(8.0);
+                    ui.separator();
+                    ui.label(egui::RichText::new("Edit party").strong());
+                    let mut focused = false;
+                    ui.horizontal(|ui| {
+                        ui.label("Name");
+                        let id = egui::Id::new("edit_party_name");
+                        focus_once(ui, id, &mut self.focus_edit_party);
+                        text_field(ui, &mut self.edit_party_name, 200.0, "Name", id, &mut focused);
+                    });
+                    ui.horizontal(|ui| {
+                        ui.checkbox(&mut self.edit_party_customer, "Customer");
+                        ui.checkbox(&mut self.edit_party_supplier, "Supplier");
+                        ui.checkbox(&mut self.edit_party_prospect, "Prospect");
+                        ui.checkbox(&mut self.edit_party_active, "Active");
+                    });
+                    let keys = form_keys(ui, focused);
+                    if keys.cancel {
+                        self.cancel_edit();
+                    }
+                    ui.horizontal(|ui| {
+                        if (keys.submit
+                            || ui
+                                .add_enabled(
+                                    live_grpc_supported() && self.mutate_slot.is_none(),
+                                    egui::Button::new("Save").fill(tokens::ACCENT),
+                                )
+                                .clicked())
+                            && !keys.cancel
+                        {
+                            self.submit_edit_party();
+                        }
+                        if ui.button("Cancel").clicked() {
+                            self.cancel_edit();
+                        }
+                    });
+                }
             }
         }
     }
@@ -749,6 +1092,7 @@ impl ReferenceApp {
                         )
                         .clicked()
                     {
+                        self.cancel_edit();
                         self.request_contacts(p.id);
                     }
                 }
@@ -756,19 +1100,30 @@ impl ReferenceApp {
 
         ui.add_space(8.0);
         ui.collapsing("Add contact", |ui| {
+            let mut focused = false;
             ui.horizontal(|ui| {
                 ui.label("Name");
-                ui.text_edit_singleline(&mut self.new_contact_name);
+                let id = egui::Id::new("create_contact_name");
+                focus_once(ui, id, &mut self.focus_create_contact);
+                text_field(ui, &mut self.new_contact_name, 160.0, "Name", id, &mut focused);
             });
             ui.horizontal(|ui| {
                 ui.label("Email");
-                ui.text_edit_singleline(&mut self.new_contact_email);
+                let id = egui::Id::new("create_contact_email");
+                text_field(ui, &mut self.new_contact_email, 160.0, "Email", id, &mut focused);
             });
             ui.horizontal(|ui| {
                 ui.label("Phone");
-                ui.text_edit_singleline(&mut self.new_contact_phone);
+                let id = egui::Id::new("create_contact_phone");
+                text_field(ui, &mut self.new_contact_phone, 120.0, "Phone", id, &mut focused);
             });
-            if ui.button("Add").clicked() {
+            let keys = form_keys(ui, focused);
+            if keys.cancel {
+                self.new_contact_name.clear();
+                self.new_contact_email.clear();
+                self.new_contact_phone.clear();
+            }
+            if (keys.submit || ui.button("Add").clicked()) && !keys.cancel {
                 self.submit_add_contact();
             }
         });
@@ -784,23 +1139,73 @@ impl ReferenceApp {
             ui.label("No contacts for this party.");
             return;
         }
+        let contacts: Vec<_> = self.contacts.clone();
         egui::Grid::new("contacts_grid")
             .striped(true)
-            .num_columns(4)
+            .num_columns(5)
             .show(ui, |ui| {
                 ui.strong("Name");
                 ui.strong("Email");
                 ui.strong("Phone");
+                ui.strong("Active");
                 ui.strong("Id");
                 ui.end_row();
-                for c in &self.contacts {
-                    ui.label(&c.name);
+                for c in &contacts {
+                    let selected = self.selected_edit_contact_id.as_deref() == Some(c.id.as_str());
+                    if ui.selectable_label(selected, &c.name).clicked() {
+                        self.select_contact_for_edit(c);
+                    }
                     ui.label(&c.email);
                     ui.label(&c.phone);
+                    ui.label(if c.active { "yes" } else { "no" });
                     ui.monospace(&c.id);
                     ui.end_row();
                 }
             });
+
+        if self.selected_edit_contact_id.is_some() {
+            ui.add_space(8.0);
+            ui.separator();
+            ui.label(egui::RichText::new("Edit contact").strong());
+            let mut focused = false;
+            ui.horizontal(|ui| {
+                ui.label("Name");
+                let id = egui::Id::new("edit_contact_name");
+                focus_once(ui, id, &mut self.focus_edit_contact);
+                text_field(ui, &mut self.edit_contact_name, 160.0, "Name", id, &mut focused);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Email");
+                let id = egui::Id::new("edit_contact_email");
+                text_field(ui, &mut self.edit_contact_email, 160.0, "Email", id, &mut focused);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Phone");
+                let id = egui::Id::new("edit_contact_phone");
+                text_field(ui, &mut self.edit_contact_phone, 120.0, "Phone", id, &mut focused);
+            });
+            ui.checkbox(&mut self.edit_contact_active, "Active");
+            let keys = form_keys(ui, focused);
+            if keys.cancel {
+                self.cancel_edit();
+            }
+            ui.horizontal(|ui| {
+                if (keys.submit
+                    || ui
+                        .add_enabled(
+                            live_grpc_supported() && self.mutate_slot.is_none(),
+                            egui::Button::new("Save").fill(tokens::ACCENT),
+                        )
+                        .clicked())
+                    && !keys.cancel
+                {
+                    self.submit_edit_contact();
+                }
+                if ui.button("Cancel").clicked() {
+                    self.cancel_edit();
+                }
+            });
+        }
     }
 
     fn draw_addresses_content(&mut self, ui: &mut egui::Ui) {
@@ -829,6 +1234,7 @@ impl ReferenceApp {
                         )
                         .clicked()
                     {
+                        self.cancel_edit();
                         self.request_addresses(p.id);
                     }
                 }
@@ -836,19 +1242,29 @@ impl ReferenceApp {
 
         ui.add_space(8.0);
         ui.collapsing("Add address (billing)", |ui| {
+            let mut focused = false;
             ui.horizontal(|ui| {
                 ui.label("Line 1");
-                ui.text_edit_singleline(&mut self.new_address_line1);
+                let id = egui::Id::new("create_address_line1");
+                focus_once(ui, id, &mut self.focus_create_address);
+                text_field(ui, &mut self.new_address_line1, 180.0, "Line 1", id, &mut focused);
             });
             ui.horizontal(|ui| {
                 ui.label("City");
-                ui.text_edit_singleline(&mut self.new_address_city);
+                let id = egui::Id::new("create_address_city");
+                text_field(ui, &mut self.new_address_city, 120.0, "City", id, &mut focused);
             });
             ui.horizontal(|ui| {
                 ui.label("Country");
-                ui.text_edit_singleline(&mut self.new_address_country);
+                let id = egui::Id::new("create_address_country");
+                text_field(ui, &mut self.new_address_country, 60.0, "AU", id, &mut focused);
             });
-            if ui.button("Add").clicked() {
+            let keys = form_keys(ui, focused);
+            if keys.cancel {
+                self.new_address_line1.clear();
+                self.new_address_city.clear();
+            }
+            if (keys.submit || ui.button("Add").clicked()) && !keys.cancel {
                 self.submit_add_address();
             }
         });
@@ -864,25 +1280,75 @@ impl ReferenceApp {
             ui.label("No addresses for this party.");
             return;
         }
+        let addresses: Vec<_> = self.addresses.clone();
         egui::Grid::new("addresses_grid")
             .striped(true)
-            .num_columns(5)
+            .num_columns(6)
             .show(ui, |ui| {
                 ui.strong("Kind");
                 ui.strong("Line 1");
                 ui.strong("City");
                 ui.strong("Country");
+                ui.strong("Active");
                 ui.strong("Id");
                 ui.end_row();
-                for a in &self.addresses {
+                for a in &addresses {
+                    let selected = self.selected_edit_address_id.as_deref() == Some(a.id.as_str());
                     ui.label(&a.kind);
-                    ui.label(&a.line1);
+                    if ui.selectable_label(selected, &a.line1).clicked() {
+                        self.select_address_for_edit(a);
+                    }
                     ui.label(&a.city);
                     ui.label(&a.country);
+                    ui.label(if a.active { "yes" } else { "no" });
                     ui.monospace(&a.id);
                     ui.end_row();
                 }
             });
+
+        if self.selected_edit_address_id.is_some() {
+            ui.add_space(8.0);
+            ui.separator();
+            ui.label(egui::RichText::new("Edit address").strong());
+            let mut focused = false;
+            ui.horizontal(|ui| {
+                ui.label("Line 1");
+                let id = egui::Id::new("edit_address_line1");
+                focus_once(ui, id, &mut self.focus_edit_address);
+                text_field(ui, &mut self.edit_address_line1, 180.0, "Line 1", id, &mut focused);
+            });
+            ui.horizontal(|ui| {
+                ui.label("City");
+                let id = egui::Id::new("edit_address_city");
+                text_field(ui, &mut self.edit_address_city, 120.0, "City", id, &mut focused);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Country");
+                let id = egui::Id::new("edit_address_country");
+                text_field(ui, &mut self.edit_address_country, 60.0, "AU", id, &mut focused);
+            });
+            ui.checkbox(&mut self.edit_address_active, "Active");
+            let keys = form_keys(ui, focused);
+            if keys.cancel {
+                self.cancel_edit();
+            }
+            ui.horizontal(|ui| {
+                if (keys.submit
+                    || ui
+                        .add_enabled(
+                            live_grpc_supported() && self.mutate_slot.is_none(),
+                            egui::Button::new("Save").fill(tokens::ACCENT),
+                        )
+                        .clicked())
+                    && !keys.cancel
+                {
+                    self.submit_edit_address();
+                }
+                if ui.button("Cancel").clicked() {
+                    self.cancel_edit();
+                }
+            });
+        }
     }
 
     fn draw_settings_content(&mut self, ui: &mut egui::Ui) {
